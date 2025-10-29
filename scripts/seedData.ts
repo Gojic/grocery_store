@@ -3,6 +3,30 @@ import User from "../src/db/models/user";
 import bcrypt from "bcrypt";
 import { Types } from "mongoose";
 
+/**
+ * Ensures that a node (organizational unit) exists in the database.
+ * If it does not exist, it will be created.
+ *
+ * Supports hierarchical structure via `parentId` and `superiors` array,
+ * which allows recursive traversal of the organization tree.
+ *
+ * ### Behavior:
+ * - If a node with the same name and parent already exists → returns it.
+ * - Otherwise → creates a new node with proper hierarchy references.
+ *
+ * @async
+ * @function ensureNode
+ * @param {string} name - Node name (e.g. "Novi Sad", "Radnja 1").
+ * @param {"OFFICE" | "STORE"} nodeType - Type of node in the hierarchy.
+ * @param {any} [parent] - Optional parent node document (used to set `parentId` and `superiors`).
+ *
+ * @returns {Promise<Node>} The existing or newly created node document.
+ *
+ * @example
+ * const noviSad = await ensureNode("Novi Sad", "OFFICE", vojvodina);
+ * await ensureNode("Radnja 1", "STORE", noviSad);
+ */
+
 async function ensureNode(name: string, nodeType: string, parent?: any) {
   const parentId = parent?._id ?? null;
   const superiors = parent ? [...(parent.superiors ?? []), parent._id] : [];
@@ -15,6 +39,31 @@ async function ensureNode(name: string, nodeType: string, parent?: any) {
 
   return node;
 }
+
+/**
+ * Ensures that a user (manager or employee) exists within a given node.
+ * If a user with the given email does not exist, it creates one.
+ *
+ * Used during seeding to assign demo users to offices and stores.
+ *
+ * ### Behavior:
+ * - If a user with the same email already exists → no action taken.
+ * - If not → user is created with the provided properties.
+ *
+ * @async
+ * @function ensureUser
+ * @param {string} email - Unique user email.
+ * @param {string} name - User’s full name.
+ * @param {"MANAGER" | "EMPLOYEE"} role - User’s role within the company.
+ * @param {Types.ObjectId} nodeId - The node (office/store) the user belongs to.
+ * @param {string} passwordHash - Bcrypt hashed password.
+ *
+ * @returns {Promise<void>} Resolves when user is ensured in database.
+ *
+ * @example
+ * await ensureUser("m1.novisad@demo.rs", "Menadzer Novi Sad", "MANAGER", noviSad._id, hash);
+ */
+
 async function ensureUser(
   email: string,
   name: string,
@@ -28,6 +77,30 @@ async function ensureUser(
     { upsert: true }
   );
 }
+
+/**
+ * Seeds the database with a hierarchical demo organization structure
+ * and associated users (managers and employees).
+ *
+ * The structure represents Serbia → Vojvodina → regional offices → stores,
+ * with multiple nested levels and a few demo users per node.
+ *
+ *
+ * ### User generation rules:
+ * - Each **OFFICE** node → 1 manager, 2 employees.
+ * - Each **STORE** node → 0 managers, 3 employees.
+ * - Default password: `"Test123!"` (bcrypt-hashed).
+ *
+ * @async
+ * @function seed
+ * @returns {Promise<void>} Fills the database with demo nodes and users.
+ *
+ * @example
+ * import { seed } from "./seed";
+ * await seed();
+ * console.log("Database seeded successfully");
+ */
+
 export async function seed() {
   const serbia = await ensureNode("Srbija", "OFFICE");
 
@@ -65,6 +138,7 @@ export async function seed() {
   let managerCounter = 1;
   let empCounter = 1;
   const pass = await bcrypt.hash("Test123!", 10);
+
   const perNode = async (
     nodeName: string,
     nodeId: string,

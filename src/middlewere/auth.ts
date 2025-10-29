@@ -3,6 +3,38 @@ import { Request, Response, NextFunction } from "express";
 import Node from "../db/models/node";
 import { asyncHandler } from "../utils/asynHandler";
 import { AppError } from "../utils/appError";
+
+/**
+ * Express middleware that authenticates incoming requests via JWT Bearer token.
+ *
+ * ### Process:
+ * 1. Reads `Authorization` header in the format: `Bearer <token>`.
+ * 2. Validates header structure and presence.
+ * 3. Verifies token using `JWT_SECRET` from environment variables.
+ * 4. Decodes user information and attaches it to `req.user`.
+ * 5. Queries all accessible node IDs (`nodeId` + descendant nodes)
+ *    and attaches them to `req.accessNodeIds` for ACL enforcement.
+ *
+ * ### Error cases:
+ * - 401 `NO_TOKEN` → Missing `Authorization` header.
+ * - 401 `BAD_HEADER` → Invalid Bearer format.
+ * - 401 `JsonWebTokenError` → Invalid or expired token.
+ * - 500 `MISSING_JWT_SECRET` → Environment variable not set.
+ *
+ * ### Example header:
+ * ```
+ * Authorization: Bearer <JWT_TOKEN>
+ * ```
+ *
+ * @param {AuthRequest} req - Extended Express Request containing optional `user` and `accessNodeIds`.
+ * @param {Response} res - Express Response object.
+ * @param {NextFunction} next - Next middleware callback.
+ *
+ * @throws {AppError} For missing token, invalid header, or missing JWT secret.
+ *
+ * @returns {void} Calls `next()` on successful authentication.
+ */
+
 export interface AuthRequest extends Request {
   user?: {
     id?: string;

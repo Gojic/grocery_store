@@ -14,6 +14,36 @@ const parseDupKey = (err: any) => {
         : "Duplicate key",
   };
 };
+
+/**
+ * Global error-handling middleware for Express.
+ * Converts different error types into standardized JSON responses.
+ *
+ * ### Handles:
+ * - `AppError` → Custom application errors (safe for clients).
+ * - `mongoose.Error.ValidationError` → Schema validation issues.
+ * - `mongoose.Error.CastError` → Invalid ObjectId or data type.
+ * - `MongoServerError` (code 11000) → Duplicate key violations.
+ * - JWT errors → Invalid or expired tokens.
+ * - Fallback → Internal server errors (500).
+ *
+ * @example
+ * return res.status(422).json({
+ *   error: {
+ *     message: "Validation failed",
+ *     code: "DB_VALIDATION",
+ *     details: [...]
+ *   }
+ * });
+ *
+ * @param {any} err - Error object thrown in middleware or route handlers.
+ * @param {Request} _req - Express Request (unused).
+ * @param {Response} res - Express Response.
+ * @param {NextFunction} _next - Express next callback (unused).
+ *
+ * @returns {Response} JSON error response with structured details.
+ */
+
 export const errorHandler = (
   err: any,
   _req: Request,
