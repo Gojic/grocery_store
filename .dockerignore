@@ -1,0 +1,33 @@
+# Node modules (instaliraju se unutar kontejnera)
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Build output
+dist
+build
+
+# Environment files (nikada ne idu u image)
+.env
+.env.local
+.env.development
+.env.production
+
+# OS/system files
+.DS_Store
+Thumbs.db
+
+# IDE/config files
+.vscode
+.idea
+*.swp
+
+# Git files
+.git
+.gitignore
+
+# Temporary files
+*.log
+tmp
+.cache
+coverage
